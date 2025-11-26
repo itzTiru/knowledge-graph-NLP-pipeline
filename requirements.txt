@@ -1,0 +1,12 @@
+neo4j
+transformers
+torch
+spacy
+streamlit
+pyvis
+networkx
+pypdf
+beautifulsoup4
+python-dotenv
+pandas
+plotly
