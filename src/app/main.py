@@ -54,3 +54,43 @@ if uploaded_file is not None:
     all_entities = []
     all_relations = []
     
+    progress_bar = st.progress(0)
+    
+    max_sentences = st.sidebar.slider("Max Sentences to Process", 5, 100, 20)
+    
+    for i, sent in enumerate(sentences[:max_sentences]):
+        ents = ner_extractor.extract_entities(sent)
+        ents = [e for e in ents if e['score'] > 0.8]
+        
+        rels = relation_extractor.extract_relations(sent, ents)
+        
+        all_entities.extend(ents)
+        all_relations.extend(rels)
+        progress_bar.progress((i + 1) / max_sentences)
+        
+    st.success(f"Extracted {len(all_entities)} entities and {len(all_relations)} relations.")
+    
+    if st.button("Build Knowledge Graph"):
+        graph_builder.create_graph(all_entities, all_relations)
+        st.success("Graph built in Neo4j!")
+        
+        st.subheader("Graph Visualization")
+        reasoner.load_graph_from_neo4j()
+        
+        net = Network(height="600px", width="100%", bgcolor="#222222", font_color="white", directed=True)
+        net.from_nx(reasoner.nx_graph)
+        
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".html") as tmp_html:
+            net.save_graph(tmp_html.name)
+            with open(tmp_html.name, 'r', encoding='utf-8') as f:
+                html_content = f.read()
+                
+        components.html(html_content, height=600, scrolling=True)
+
+        st.subheader("Graph Analysis")
+        centrality = reasoner.calculate_centrality()
+        if centrality:
+            st.write("Top 5 Central Nodes:")
+            st.write(centrality[:5])
+            
+    os.remove(tmp_path)
